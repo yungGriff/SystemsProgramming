@@ -1,0 +1,107 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+#define SIZE 100
+
+void merge(int arr[], int left, int mid, int right) {
+    int i, j, k;
+    int n1 = mid - left + 1;
+    int n2 = right - mid;
+
+    int L[n1], R[n2];
+
+    for (i = 0; i < n1; i++)
+        L[i] = arr[left + i];
+    for (j = 0; j < n2; j++)
+        R[j] = arr[mid + 1 + j];
+
+    i = 0;
+    j = 0;
+    k = left;
+    while (i < n1 && j < n2) {
+        if (L[i] <= R[j]) {
+            arr[k] = L[i];
+            i++;
+        }
+        else {
+            arr[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+
+    while (i < n1) {
+        arr[k] = L[i];
+        i++;
+        k++;
+    }
+
+    while (j < n2) {
+        arr[k] = R[j];
+        j++;
+        k++;
+    }
+}
+
+void merge_sort(int arr[], int left, int right) {
+    if (left < right) {
+        int mid = left + (right - left) / 2;
+
+        merge_sort(arr, left, mid);
+        merge_sort(arr, mid + 1, right);
+
+        merge(arr, left, mid, right);
+    }
+}
+
+struct thread_args {
+    int* arr;
+    int left;
+    int right;
+};
+
+void* merge_sort_thread(void* args) {
+    struct thread_args* ta = (struct thread_args*) args;
+    merge_sort(ta->arr, ta->left, ta->right);
+    return NULL;
+}
+
+int main() {
+    int arr[SIZE];
+    srand(time(NULL));
+    for (int i = 0; i < SIZE; i++) {
+        arr[i] = rand() % 1000;
+    }
+
+    pthread_t threads[4];
+    struct thread_args args[4];
+
+    for (int i = 0; i < 4; i++) {
+        int left = i * SIZE / 4;
+        int right = (i + 1) * SIZE / 4 - 1;
+        args[i].arr = arr;
+        args[i].left = left;
+        args[i].right = right;
+        pthread_create(&threads[i], NULL, merge_sort_thread, &args[i]);
+    }
+
+    for (int i = 0; i < 4; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    // merge the four sub-arrays
+    merge(arr, 0, SIZE / 4 - 1, SIZE / 2 - 1);
+    merge(arr, SIZE / 2, SIZE / 4 + SIZE / 2 - 1, SIZE - 1);
+    merge(arr, 0, SIZE / 2 - 1, SIZE - 1);
+
+    // print the sorted array
+    for (int i = 0; i < SIZE; i++) {
+        printf("%d ", arr[i]);
+    }
+    
+    return 0;
+}
+
+
+
